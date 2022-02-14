@@ -14,8 +14,8 @@ export class DB {
   }
   // 🧼 camelCase consistent naming
   public static update<T>(dao: T): number {
-    const recordsAffected = 1;
     console.log(dao);
+    const recordsAffected = 1; // 🧼 no magic numbers
     return recordsAffected;
   }
 }
