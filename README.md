@@ -1,17 +1,17 @@
-# Labs Clean Code Intro
+# Balidea Clean Code Intro
 
 > Introduction to clean development
 
 ## Code
 
 ```
-git clone https://github.com/LabsAdemy/Labs-CleanCode-Intro.git
+git clone https://github.com/LabsAdemy/Balidea-CleanCode-Intro.git
 npm i
 ```
 
 ## Exercise
 
-Tasks for Astro Bookings: https://github.com/LabsAdemy/Labs-CleanCode-Intro/blob/main/TO_DO.md
+Tasks for Astro Bookings: https://github.com/LabsAdemy/Balidea-CleanCode-Intro/blob/main/TO_DO.md
 
 ## 🛠 VS Code
 
