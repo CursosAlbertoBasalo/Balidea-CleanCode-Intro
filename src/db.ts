@@ -3,15 +3,17 @@ export class DB {
     console.log(query);
     return [];
   }
-  public static findOne<T>(query: string): T {
+  // 🧼 same family of methods for all DAOs
+  public static selectOne<T>(query: string): T {
     console.log(query);
     return {} as T;
   }
-  public static post<T>(dao: T): string {
+  public static insert<T>(dao: T): string {
     console.log(dao);
     return Date.now().toString();
   }
-  public static Update<T>(dao: T): number {
+  // 🧼 camelCase consistent naming
+  public static update<T>(dao: T): number {
     console.log(dao);
     return 1;
   }
