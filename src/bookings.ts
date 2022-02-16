@@ -2,7 +2,7 @@
 /* eslint-disable max-statements */
 /* eslint-disable max-lines-per-function */
 import { Booking, BookingStatus } from "./booking";
-import { DB } from "./db";
+import { DataBase } from "./database";
 import { PaymentMethod, Payments } from "./payments";
 import { SMTP } from "./smtp";
 import { Traveler } from "./traveler";
@@ -80,12 +80,12 @@ export class Bookings {
   }
 
   private isNonVip(travelerId: string): boolean {
-    this.traveler = DB.selectOne<Traveler>(`SELECT * FROM travelers WHERE id = '${travelerId}'`);
+    this.traveler = DataBase.selectOne<Traveler>(`SELECT * FROM travelers WHERE id = '${travelerId}'`);
     return this.traveler.isVip;
   }
 
   private checkAvailability(tripId: string, passengersCount: number) {
-    this.trip = DB.selectOne<Trip>(`SELECT * FROM trips WHERE id = '${tripId}'`);
+    this.trip = DataBase.selectOne<Trip>(`SELECT * FROM trips WHERE id = '${tripId}'`);
     const hasAvailableSeats = this.trip.availablePlaces >= passengersCount;
     if (!hasAvailableSeats) {
       throw new Error("There are no seats available in the trip");
@@ -93,7 +93,7 @@ export class Bookings {
   }
 
   private save() {
-    this.booking.id = DB.insert<Booking>(this.booking);
+    this.booking.id = DataBase.insert<Booking>(this.booking);
   }
 
   private pay(cardNumber: string, cardExpiry: string, cardCVC: string) {
@@ -122,7 +122,7 @@ export class Bookings {
         `Using card ${cardNumber} amounting to ${this.booking.price}`,
       );
     }
-    DB.update(this.booking);
+    DataBase.update(this.booking);
   }
 
   private calculatePrice(): number {
