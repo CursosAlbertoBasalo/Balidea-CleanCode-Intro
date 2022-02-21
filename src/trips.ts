@@ -1,5 +1,7 @@
 import { Booking, BookingStatus } from "./booking";
+import { DateRangeVO } from "./dateRangeVO";
 import { DB } from "./db";
+import { FindTripsDTO } from "./findTripsDTO";
 import { Notifications } from "./notifications";
 import { SMTP } from "./smtp";
 import { Traveler } from "./traveler";
@@ -11,12 +13,11 @@ export class Trips {
     this.cancelBookings(tripId, trip);
   }
 
-  public findTrips(destination: string, startDate: string, endDate: string): Trip[] {
-    if (startDate < endDate) {
-      throw new Error("Start date must be before end date");
-    }
+  public findTrips(findTripsDTO: FindTripsDTO): Trip[] {
+    // 🧼 date range ensures the range is valid
+    const dates = new DateRangeVO(findTripsDTO.startDate, findTripsDTO.endDate);
     const trips: Trip[] = DB.select(
-      `SELECT * FROM trips WHERE destination = '${destination}' AND start_date >= '${startDate}' AND end_date <= '${endDate}'`,
+      `SELECT * FROM trips WHERE destination = '${findTripsDTO.destination}' AND start_date >= '${dates.start}' AND end_date <= '${dates.end}'`,
     );
     return trips;
   }

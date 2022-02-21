@@ -1,8 +1,10 @@
 /* eslint-disable max-lines-per-function */
 import { Booking } from "./booking";
-import { CreditCardDTO } from "./creditCardDTO";
+import { BookingPaymentDTO } from "./bookingPaymentDTO";
+import { CreditCardVO } from "./creditCardVO";
 import { HTTP } from "./http";
 import { Notifications } from "./notifications";
+import { PayMeDTO } from "./payMeDTO";
 
 export enum PaymentMethod {
   CREDIT_CARD,
@@ -14,33 +16,25 @@ export class Payments {
   private cardWayAPIUrl = "https://card-way.com/";
   private payMeAPIUrl = "https://pay-me.com/v1/payments";
   private bankEmail = "humanprocessor@bancka.com";
-  private booking!: Booking;
-  // To Do: 🚧 clean pending...
-  public payBooking(
-    booking: Booking,
-    method: PaymentMethod,
-    cardNumber: string,
-    cardExpiry: string,
-    cardCVC: string,
-    payMeAccount: string,
-    payMeCode: string,
-    transferAccount: string,
-  ): string {
-    this.booking = booking;
-    switch (method) {
-      case PaymentMethod.CREDIT_CARD: {
-        const creditCard = new CreditCardDTO(cardNumber, cardExpiry, cardCVC);
-        return this.payWithCard(creditCard);
-      }
+
+  constructor(private booking: Booking) {}
+
+  public payBooking(bookingPayment: BookingPaymentDTO): string {
+    switch (bookingPayment.method) {
+      case PaymentMethod.CREDIT_CARD:
+        return this.payWithCard(bookingPayment.creditCard);
       case PaymentMethod.PAY_ME:
-        return this.payWithPayMe(payMeAccount, payMeCode);
+        return this.payWithPayMe(bookingPayment.payMe);
       case PaymentMethod.TRANSFER:
-        return this.payWithBank(transferAccount);
+        return this.payWithBank(bookingPayment.transferAccount);
       default:
-        throw new Error(`Unknown payment method: ${method}`);
+        throw new Error(`Unknown payment method: ${bookingPayment.method}`);
     }
   }
-  private payWithCard(creditCard: CreditCardDTO) {
+  private payWithCard(creditCard?: CreditCardVO) {
+    if (!creditCard) {
+      throw new Error("Credit card is null or undefined");
+    }
     const url = `${this.cardWayAPIUrl}payments/card${creditCard.number}/${creditCard.expiration}/${creditCard.cvv}`;
     const response = HTTP.request(url, {
       method: "POST",
@@ -52,11 +46,19 @@ export class Payments {
       return "";
     }
   }
-  private payWithPayMe(payMeAccount: string, payMeCode: string) {
+  private payWithPayMe(payMe?: PayMeDTO) {
+    if (!payMe) {
+      throw new Error("PayMe is null or undefined");
+    }
     const url = `${this.payMeAPIUrl}`;
     const response = HTTP.request(url, {
       method: "POST",
-      body: { payMeAccount, payMeCode, amount: this.booking.price, identification: this.booking.id },
+      body: {
+        payMeAccount: payMe.account,
+        payMeCode: payMe.code,
+        amount: this.booking.price,
+        identification: this.booking.id,
+      },
     });
     if (response.status === 201) {
       return response.body ? (response.body.pay_me_code as string) : "";
@@ -64,11 +66,19 @@ export class Payments {
       return "";
     }
   }
-  private payWithBank(transferAccount: string) {
+  private payWithBank(transferAccount?: string) {
+    if (!transferAccount) {
+      throw new Error("Transfer account is null or undefined");
+    }
     if (this.booking.id === null || this.booking.id === undefined) {
       throw new Error("Booking id is null or undefined");
     }
     const notifications = new Notifications();
-    return notifications.notifyBankTransfer(this.bankEmail, this.booking.id, this.booking.price, transferAccount);
+    return notifications.notifyBankTransfer({
+      recipient: this.bankEmail,
+      bookingId: this.booking.id,
+      amount: this.booking.price,
+      transferAccount: transferAccount,
+    });
   }
 }
