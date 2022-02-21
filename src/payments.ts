@@ -1,9 +1,7 @@
-/* eslint-disable max-statements */
-/* eslint-disable max-depth */
 /* eslint-disable max-lines-per-function */
 import { Booking } from "./booking";
 import { HTTP } from "./http";
-import { SMTP } from "./smtp";
+import { Notifications } from "./notifications";
 
 export enum PaymentMethod {
   CREDIT_CARD,
@@ -16,6 +14,7 @@ export class Payments {
   private payMeAPIUrl = "https://pay-me.com/v1/payments";
   private bankEmail = "humanprocessor@bancka.com";
 
+  // To Do: 🚧 clean pending...
   public payBooking(
     booking: Booking,
     method: PaymentMethod,
@@ -26,7 +25,6 @@ export class Payments {
     payMeCode: string,
     transferAccount: string,
   ): string {
-    // 🧼 complex blocks on functions
     switch (method) {
       case PaymentMethod.CREDIT_CARD:
         return this.payWithCard(booking, cardNumber, cardExpiry, cardCVC);
@@ -60,10 +58,10 @@ export class Payments {
     }
   }
   private payWithBank(booking: Booking, transferAccount: string) {
-    const smtp = new SMTP();
-    const subject = `Payment request for Booking ${booking.id}`;
-    const body = `Please transfer ${booking.price} to ${transferAccount}`;
-    smtp.sendMail("payments@astrobookings.com", this.bankEmail, subject, body);
-    return "";
+    if (booking.id === null || booking.id === undefined) {
+      throw new Error("Booking id is null or undefined");
+    }
+    const notifications = new Notifications();
+    return notifications.notifyBankTransfer(this.bankEmail, booking.id, booking.price, transferAccount);
   }
 }

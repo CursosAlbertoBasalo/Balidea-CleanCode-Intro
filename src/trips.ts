@@ -1,14 +1,24 @@
 import { Booking, BookingStatus } from "./booking";
 import { DB } from "./db";
+import { Notifications } from "./notifications";
 import { SMTP } from "./smtp";
 import { Traveler } from "./traveler";
 import { Trip, TripStatus } from "./trip";
 
 export class Trips {
   public cancelTrip(tripId: string) {
-    // 🧼 same level of abstraction
     const trip: Trip = this.updateTripStatus(tripId);
     this.cancelBookings(tripId, trip);
+  }
+
+  public findTrips(destination: string, startDate: string, endDate: string): Trip[] {
+    if (startDate < endDate) {
+      throw new Error("Start date must be before end date");
+    }
+    const trips: Trip[] = DB.select(
+      `SELECT * FROM trips WHERE destination = '${destination}' AND start_date >= '${startDate}' AND end_date <= '${endDate}'`,
+    );
+    return trips;
   }
 
   private updateTripStatus(tripId: string) {
@@ -20,12 +30,10 @@ export class Trips {
 
   private cancelBookings(tripId: string, trip: Trip) {
     const bookings: Booking[] = DB.select("SELECT * FROM bookings WHERE trip_id = " + tripId);
-    // 🧼 early return and expressive conditional
     if (this.hasNoBookings(bookings)) {
       return;
     }
     const smtp = new SMTP();
-    // 🧼 no nested structures nor complex blocks
     for (const booking of bookings) {
       this.cancelBooking(booking, smtp, trip);
     }
@@ -45,12 +53,8 @@ export class Trips {
     if (!traveler) {
       return;
     }
-    smtp.sendMail(
-      "trips@astrobookings.com",
-      traveler.email,
-      "Trip cancelled",
-      `Sorry, your trip ${trip.destination} has been cancelled.`,
-    );
+    const notifications = new Notifications();
+    notifications.notifyTripCancellation(traveler.email, trip.destination);
   }
 
   private updateBookingStatus(booking: Booking) {
