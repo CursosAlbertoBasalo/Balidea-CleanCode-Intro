@@ -1,4 +1,5 @@
 import { Booking, BookingStatus } from "./booking";
+import { BookingsRequestDTO } from "./bookingsRequestDTO";
 import { DB } from "./db";
 import { Notifications } from "./notifications";
 import { PaymentMethod, Payments } from "./payments";
@@ -13,27 +14,11 @@ export class Bookings {
 
   /**
    * Requests a new booking
-   * @param {string} travelerId - the id of the traveler soliciting the booking
-   * @param {string} tripId - the id of the trip to book
-   * @param {number} passengersCount - the number of passengers to reserve
-   * @param {string} cardNumber - the card number to pay with
-   * @param {string} cardExpiry - the card expiry date
-   * @param {string} cardCVC - the card CVC
-   * @param {boolean} hasPremiumFoods - if the traveler has premium foods
-   * @param {number} extraLuggageKilos - the number of extra luggage kilos
+   * @param bookingsRequestDTO - the booking request
    * @returns {Booking} the new booking object
    * @throws {Error} if the booking is not possible
    */
-  public request(
-    travelerId: string,
-    tripId: string,
-    passengersCount: number,
-    cardNumber: string,
-    cardExpiry: string,
-    cardCVC: string,
-    hasPremiumFoods: boolean,
-    extraLuggageKilos: number,
-  ): Booking {
+  public request(bookingsRequestDTO: BookingsRequestDTO): Booking {
     if (this.hasEntitiesId(travelerId, tripId) === false) {
       throw new Error("Invalid parameters");
     }
