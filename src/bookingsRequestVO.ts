@@ -1,3 +1,4 @@
+/* eslint-disable max-statements */
 import { BookingsRequestDTO } from "./bookingsRequestDTO";
 import { CreditCardVO } from "./creditCardVO";
 
