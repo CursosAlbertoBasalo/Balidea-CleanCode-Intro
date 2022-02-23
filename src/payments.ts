@@ -12,6 +12,49 @@ export enum PaymentMethod {
   PAY_ME,
   TRANSFER,
 }
+export interface IPay {
+  pay(method: CreditCardVO | PayMeDTO): string;
+}
+
+export class PaymentFactory {
+  public static createPayment(booking: Booking, method: PaymentMethod): IPay {
+    switch (method) {
+      case PaymentMethod.CREDIT_CARD:
+        return new CreditCardPayment(booking);
+
+      default:
+        break;
+    }
+  }
+}
+
+export class AbstractPayment {
+  constructor(protected booking: Booking) {}
+}
+
+export class CreditCardPayment extends AbstractPayment implements IPay {
+  private cardWayAPIUrl = "https://card-way.com/";
+
+  constructor(booking: Booking) {
+    super(booking);
+  }
+
+  public pay(creditCard: CreditCardVO): string {
+    if (!creditCard) {
+      throw new Error("Credit card is null or undefined");
+    }
+    const url = `${this.cardWayAPIUrl}payments/card${creditCard.number}/${creditCard.expiration}/${creditCard.cvv}`;
+    const response = HTTP.request(url, {
+      method: "POST",
+      body: { amount: this.booking.price, concept: this.booking.id },
+    });
+    if (response.status === 200) {
+      return response.body ? (response.body.transactionID as string) : "";
+    } else {
+      return "";
+    }
+  }
+}
 
 export class Payments {
   private cardWayAPIUrl = "https://card-way.com/";
@@ -32,6 +75,7 @@ export class Payments {
         throw new Error(`Unknown payment method: ${bookingPayment.method}`);
     }
   }
+
   private payWithCard(creditCard?: CreditCardVO) {
     if (!creditCard) {
       throw new Error("Credit card is null or undefined");
