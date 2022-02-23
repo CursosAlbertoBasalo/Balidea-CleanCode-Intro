@@ -5,7 +5,7 @@ import { CreditCardVO } from "./creditCardVO";
 import { HTTP } from "./http";
 import { Notifications } from "./notifications";
 import { PayMeDTO } from "./payMeDTO";
-import { SMTP } from "./smtp";
+import { ISendMail, SMTP } from "./smtp";
 
 export enum PaymentMethod {
   CREDIT_CARD,
@@ -75,12 +75,30 @@ export class Payments {
       throw new Error("Booking id is null or undefined");
     }
     // 🧼 Inject smtp into the Notifications class
-    const notifications = new Notifications(new SMTP());
+    const notifications = NotificationsBuilder.createNotifications();
+    //new Notifications(SendMailFactory.createSender());
     return notifications.notifyBankTransfer({
       recipient: this.bankEmail,
       bookingId: this.booking.id,
       amount: this.booking.price,
       transferAccount: transferAccount,
     });
+  }
+}
+
+class SendMailFactory {
+  public static createSender(): ISendMail {
+    return new SMTP();
+  }
+}
+
+class NotificationsBuilder {
+  private static notifications?: Notifications;
+
+  public static createNotifications(): Notifications {
+    if (!NotificationsBuilder.notifications) {
+      NotificationsBuilder.notifications = new Notifications(SendMailFactory.createSender());
+    }
+    return NotificationsBuilder.notifications;
   }
 }

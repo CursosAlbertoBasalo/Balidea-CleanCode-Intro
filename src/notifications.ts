@@ -21,6 +21,7 @@ export class Notifications {
   // private smtp = new SMTP();
   // private emailSender = new SMTP();
   // 🧼 Depend on abstractions, not the implementation
+  // private emailSender: ISendMail = SendMailFactory.createSender();
   private emailSender: ISendMail;
 
   constructor(emailSender: ISendMail) {
