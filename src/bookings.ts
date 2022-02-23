@@ -1,4 +1,6 @@
 import { Booking, BookingStatus } from "./booking";
+import { BookingsLogic } from "./bookings.logic";
+import { BookingsRepository } from "./bookings.repository";
 import { BookingsRequestDTO } from "./bookingsRequestDTO";
 import { BookingsRequestVO } from "./bookingsRequestVO";
 import { CreditCardVO } from "./creditCardVO";
@@ -15,7 +17,8 @@ export class Bookings {
   private trip!: Trip;
   private traveler!: Traveler;
   private bookingsRequest!: BookingsRequestVO;
-
+  private bookingsLogic!: BookingsLogic;
+  private bookingsRepository = new BookingsRepository();
   /**
    * Requests a new booking
    * @param bookingsRequestDTO - the booking request
@@ -24,13 +27,29 @@ export class Bookings {
    */
   public request(bookingsRequestDTO: BookingsRequestDTO): Booking {
     this.bookingsRequest = new BookingsRequestVO(bookingsRequestDTO);
+    this.bookingsLogic = new BookingsLogic(this.bookingsRequest);
+    this.trip = this.bookingsRepository.selectTripById(this.bookingsRequest.tripId);
+    this.traveler = this.bookingsRepository.selectTravelerById(this.bookingsRequest.travelerId);
     this.create();
-    this.save();
+    this.booking = this.bookingsRepository.insert(this.booking);
     this.pay();
     this.notify();
     return this.booking;
   }
-  notify() {
+
+  private create(): void {
+    this.bookingsRequest.passengersCount = this.bookingsLogic.getValidatedPassengersCount(this.traveler);
+    this.bookingsLogic.checkAvailability(this.trip);
+    this.booking = new Booking(
+      this.bookingsRequest.tripId,
+      this.bookingsRequest.travelerId,
+      this.bookingsRequest.passengersCount,
+    );
+    this.booking.hasPremiumFoods = this.bookingsRequest.hasPremiumFoods;
+    this.booking.extraLuggageKilos = this.bookingsRequest.extraLuggageKilos;
+  }
+
+  public notify() {
     if (this.booking.id === undefined) {
       return;
     }
@@ -50,60 +69,6 @@ export class Bookings {
       DB.update(this.booking);
       throw error;
     }
-  }
-
-  private create(): void {
-    this.bookingsRequest.passengersCount = this.getValidatedPassengersCount();
-    this.checkAvailability();
-    this.booking = new Booking(
-      this.bookingsRequest.tripId,
-      this.bookingsRequest.travelerId,
-      this.bookingsRequest.passengersCount,
-    );
-    this.booking.hasPremiumFoods = this.bookingsRequest.hasPremiumFoods;
-    this.booking.extraLuggageKilos = this.bookingsRequest.extraLuggageKilos;
-  }
-
-  private getValidatedPassengersCount() {
-    this.assertPassengers();
-
-    return this.bookingsRequest.passengersCount;
-  }
-
-  private assertPassengers() {
-    this.assertPassengersForVip();
-    this.assertPassengersForNonVip();
-  }
-
-  private assertPassengersForVip() {
-    const maxPassengersCount = 6;
-    if (this.bookingsRequest.passengersCount > maxPassengersCount) {
-      throw new Error(`Nobody can't have more than ${maxPassengersCount} passengers`);
-    }
-  }
-  private assertPassengersForNonVip() {
-    const maxNonVipPassengersCount = 4;
-    const isTooMuchForNonVip = this.bookingsRequest.passengersCount > maxNonVipPassengersCount;
-    if (this.isNonVip(this.bookingsRequest.travelerId) && isTooMuchForNonVip) {
-      throw new Error(`Nobody can't have more than ${maxNonVipPassengersCount} passengers`);
-    }
-  }
-
-  private isNonVip(travelerId: string): boolean {
-    this.traveler = DB.selectOne<Traveler>(`SELECT * FROM travelers WHERE id = '${travelerId}'`);
-    return this.traveler.isVip;
-  }
-
-  private checkAvailability() {
-    this.trip = DB.selectOne<Trip>(`SELECT * FROM trips WHERE id = '${this.bookingsRequest.tripId}'`);
-    const hasAvailableSeats = this.trip.availablePlaces >= this.bookingsRequest.passengersCount;
-    if (!hasAvailableSeats) {
-      throw new Error("There are no seats available in the trip");
-    }
-  }
-
-  private save() {
-    this.booking.id = DB.insert<Booking>(this.booking);
   }
 
   private payWithCreditCard(creditCard: CreditCardVO) {
