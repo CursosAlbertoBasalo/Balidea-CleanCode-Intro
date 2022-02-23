@@ -22,8 +22,6 @@ export class Bookings {
    * @throws {Error} if the booking is not possible
    */
   public request(bookingsRequestDTO: BookingsRequestDTO): Booking {
-    // 🧼 Data transfer object to avoid multiple parameters on methods signatures
-    // TO Do: booking request object value validation
     const bookingsRequest = new BookingsRequestVO(bookingsRequestDTO);
     this.create(bookingsRequest);
     this.save();

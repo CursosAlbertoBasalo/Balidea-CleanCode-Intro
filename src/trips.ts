@@ -14,7 +14,6 @@ export class Trips {
   }
 
   public findTrips(findTripsDTO: FindTripsDTO): Trip[] {
-    // 🧼 date range ensures the range is valid
     const dates = new DateRangeVO(findTripsDTO.startDate, findTripsDTO.endDate);
     const trips: Trip[] = DB.select(
       `SELECT * FROM trips WHERE destination = '${findTripsDTO.destination}' AND start_date >= '${dates.start}' AND end_date <= '${dates.end}'`,

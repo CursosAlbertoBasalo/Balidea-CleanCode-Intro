@@ -1,6 +1,10 @@
 import { EmailDTO } from "./emailDTO";
 
-export class SMTP {
+export interface ISendMail {
+  sendMail(email: EmailDTO): string;
+}
+
+export class SMTP implements ISendMail {
   private smtpServer = "smtp.astrobookings.com";
   private smtpPort = 25;
   private smtpSecurePort = 587;

@@ -1,10 +1,12 @@
 import { NotificationEvent } from "./notificationEvent";
 import { SMTP } from "./smtp";
+
 export enum NotificationKinds {
   BOOKING_CONFIRMED,
   TRIP_CANCELLED,
   BANK_TRANSFER_REQUEST,
 }
+
 const notificationsConfigurations = [
   {
     kind: NotificationKinds.BANK_TRANSFER_REQUEST,
@@ -14,6 +16,7 @@ const notificationsConfigurations = [
   { kind: NotificationKinds.BOOKING_CONFIRMED, sender: "bookings@astrobookings.com", subject: "Booking confirmation" },
   { kind: NotificationKinds.TRIP_CANCELLED, sender: "trips@astrobookings.com", subject: "Trip cancelled" },
 ];
+
 export class Notifications {
   private smtp = new SMTP();
 
