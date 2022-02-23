@@ -27,11 +27,11 @@ export class Bookings {
    */
   public request(bookingsRequestDTO: BookingsRequestDTO): Booking {
     this.bookingsRequest = new BookingsRequestVO(bookingsRequestDTO);
+    // 🧼 Extract the logic from the Bookings class
     this.bookingsLogic = new BookingsLogic(this.bookingsRequest);
     this.trip = this.bookingsRepository.selectTripById(this.bookingsRequest.tripId);
     this.traveler = this.bookingsRepository.selectTravelerById(this.bookingsRequest.travelerId);
     this.create();
-    this.booking = this.bookingsRepository.insert(this.booking);
     this.pay();
     this.notify();
     return this.booking;
@@ -47,19 +47,23 @@ export class Bookings {
     );
     this.booking.hasPremiumFoods = this.bookingsRequest.hasPremiumFoods;
     this.booking.extraLuggageKilos = this.bookingsRequest.extraLuggageKilos;
+    this.booking = this.bookingsRepository.insert(this.booking);
   }
 
   public notify() {
     if (this.booking.id === undefined) {
       return;
     }
-    const notifications = new Notifications();
+    // 🧼 Inject smtp into the Notifications class
+    const notifications = new Notifications(new SMTP());
     return notifications.notifyBookingConfirmation({
       recipient: this.traveler.email,
       tripDestination: this.trip.destination,
       bookingId: this.booking.id,
     });
   }
+
+  // ! To Do: take payment logic to a booking payments class
 
   private pay() {
     try {

@@ -1,7 +1,5 @@
 import { Booking, BookingStatus } from "./booking";
-import { DateRangeVO } from "./dateRangeVO";
 import { DB } from "./db";
-import { FindTripsDTO } from "./findTripsDTO";
 import { Notifications } from "./notifications";
 import { SMTP } from "./smtp";
 import { Traveler } from "./traveler";
@@ -16,13 +14,7 @@ export class Trips {
     this.cancelBookings();
   }
 
-  public findTrips(findTripsDTO: FindTripsDTO): Trip[] {
-    const dates = new DateRangeVO(findTripsDTO.startDate, findTripsDTO.endDate);
-    const trips: Trip[] = DB.select(
-      `SELECT * FROM trips WHERE destination = '${findTripsDTO.destination}' AND start_date >= '${dates.start}' AND end_date <= '${dates.end}'`,
-    );
-    return trips;
-  }
+  // ! To Do: take infrastructure to a trips repository
 
   private updateTripStatus() {
     const trip: Trip = DB.selectOne<Trip>(`SELECT * FROM trips WHERE id = '${this.tripId}'`);
@@ -56,7 +48,8 @@ export class Trips {
     if (!traveler) {
       return;
     }
-    const notifications = new Notifications();
+    // 🧼 Inject smtp into the Notifications class
+    const notifications = new Notifications(new SMTP());
     notifications.notifyTripCancellation({
       recipient: traveler.email,
       tripDestination: trip.destination,

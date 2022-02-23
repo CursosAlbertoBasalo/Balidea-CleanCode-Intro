@@ -1,5 +1,5 @@
 import { NotificationEvent } from "./notificationEvent";
-import { SMTP } from "./smtp";
+import { ISendMail } from "./smtp";
 
 export enum NotificationKinds {
   BOOKING_CONFIRMED,
@@ -18,13 +18,21 @@ const notificationsConfigurations = [
 ];
 
 export class Notifications {
-  private smtp = new SMTP();
+  // private smtp = new SMTP();
+  // private emailSender = new SMTP();
+  // 🧼 Depend on abstractions, not the implementation
+  private emailSender: ISendMail;
+
+  constructor(emailSender: ISendMail) {
+    // 🧼 Receive the emailSender from the dependency injection
+    this.emailSender = emailSender;
+  }
 
   public notifyTripCancellation(cancellation: NotificationEvent): string {
     const notificationConfiguration = notificationsConfigurations.find(
       (n) => n.kind === NotificationKinds.TRIP_CANCELLED,
     );
-    return this.smtp.sendMail({
+    return this.emailSender.sendMail({
       from: notificationConfiguration?.sender || "",
       to: cancellation.recipient,
       subject: notificationConfiguration?.sender || "",
@@ -35,7 +43,7 @@ export class Notifications {
     const notificationConfiguration = notificationsConfigurations.find(
       (n) => n.kind === NotificationKinds.TRIP_CANCELLED,
     );
-    return this.smtp.sendMail({
+    return this.emailSender.sendMail({
       from: notificationConfiguration?.sender || "",
       to: transfer.recipient,
       subject: `${notificationConfiguration?.sender || ""}  -  ${transfer.bookingId}`,
@@ -46,7 +54,7 @@ export class Notifications {
     const notificationConfiguration = notificationsConfigurations.find(
       (n) => n.kind === NotificationKinds.BOOKING_CONFIRMED,
     );
-    return this.smtp.sendMail({
+    return this.emailSender.sendMail({
       from: notificationConfiguration?.sender || "",
       to: confirmation.recipient,
       subject: `${notificationConfiguration?.sender || ""}  -  ${confirmation.bookingId}`,

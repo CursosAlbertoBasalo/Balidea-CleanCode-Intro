@@ -5,6 +5,7 @@ import { CreditCardVO } from "./creditCardVO";
 import { HTTP } from "./http";
 import { Notifications } from "./notifications";
 import { PayMeDTO } from "./payMeDTO";
+import { SMTP } from "./smtp";
 
 export enum PaymentMethod {
   CREDIT_CARD,
@@ -73,7 +74,8 @@ export class Payments {
     if (this.booking.id === null || this.booking.id === undefined) {
       throw new Error("Booking id is null or undefined");
     }
-    const notifications = new Notifications();
+    // 🧼 Inject smtp into the Notifications class
+    const notifications = new Notifications(new SMTP());
     return notifications.notifyBankTransfer({
       recipient: this.bankEmail,
       bookingId: this.booking.id,
