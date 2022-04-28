@@ -1,11 +1,11 @@
 import { Booking, BookingStatus } from "./booking";
-import { DB } from "./db";
-import { PaymentMethod, Payments } from "./payments";
-import { SMTP } from "./smtp";
+import { DataBase } from "./data_base";
+import { PaymentsService } from "./payments.service";
+import { SmtpService } from "./smtp.service";
 import { Traveler } from "./traveler";
 import { Trip } from "./trip";
 
-export class Bookings {
+export class BookingsService {
   private booking!: Booking;
   private trip!: Trip;
   private traveler!: Traveler;
@@ -33,20 +33,20 @@ export class Bookings {
     hasPremiumFoods: boolean,
     extraLuggageKilos: number,
   ): Booking {
-    // 🧼 early return
-    // 🧼 conditional validation on functions
+    // * 🧼 🚿 CLEAN:  early return
+    // * 🧼 🚿 CLEAN:  conditional validation on functions
     if (this.hasEntitiesId(travelerId, tripId) === false) {
       throw new Error("Invalid parameters");
     }
     this.create(travelerId, tripId, passengersCount, hasPremiumFoods, extraLuggageKilos);
-    this.save();
-    // 🧼 one condition per function
+    this.booking.id = this.save();
+    // * 🧼 🚿 CLEAN:  one condition per function
     this.pay(cardNumber, cardExpiry, cardCVC);
     return this.booking;
   }
 
   private pay(cardNumber: string, cardExpiry: string, cardCVC: string) {
-    // 🧼 conditional validation on functions
+    // * 🧼 🚿 CLEAN:  conditional validation on functions
     if (this.hasCreditCard(cardNumber, cardExpiry, cardCVC)) {
       this.payWithCreditCard(cardNumber, cardExpiry, cardCVC);
     } else {
@@ -55,7 +55,7 @@ export class Bookings {
   }
 
   private hasEntitiesId(travelerId: string, tripId: string): boolean {
-    return travelerId !== "" && tripId !== "";
+    return travelerId !== "" && tripId !== ""; // * 🧼 🚿 CLEAN:  complex conditionals closed inside functions
   }
 
   private hasCreditCard(cardNumber: string, cardExpiry: string, cardCVC: string): boolean {
@@ -77,13 +77,12 @@ export class Bookings {
   }
 
   private getValidatedPassengersCount(travelerId: string, passengersCount: number) {
-    // To Do: clean pending...
     const maxPassengersCount = 6;
     if (passengersCount > maxPassengersCount) {
       throw new Error(`Nobody can't have more than ${maxPassengersCount} passengers`);
     }
     const maxNonVipPassengersCount = 4;
-    // 🧼 conditional validation on functions
+    // * 🧼 🚿 CLEAN:  conditional validation on functions
     if (this.hasTooManyPassengersForNonVip(travelerId, passengersCount, maxNonVipPassengersCount)) {
       throw new Error(`No VIPs cant't have more than ${maxNonVipPassengersCount} passengers`);
     }
@@ -94,58 +93,69 @@ export class Bookings {
   }
 
   private hasTooManyPassengersForNonVip(travelerId: string, passengersCount: number, maxNonVipPassengersCount: number) {
-    // 🧼 one operator per statement
+    // * 🧼 🚿 CLEAN:  one operator per statement
     const isTooMuchForNonVip = passengersCount > maxNonVipPassengersCount;
-    return this.isNonVip(travelerId) && isTooMuchForNonVip;
+    const isNonVip = this.isNonVip(travelerId);
+    return isNonVip && isTooMuchForNonVip;
   }
 
   private isNonVip(travelerId: string): boolean {
-    this.traveler = DB.selectOne<Traveler>(`SELECT * FROM travelers WHERE id = '${travelerId}'`);
-    return this.traveler.isVip;
+    this.traveler = this.selectTraveler(travelerId);
+    return this.traveler.isVip == false;
   }
 
   private checkAvailability(tripId: string, passengersCount: number) {
-    this.trip = DB.selectOne<Trip>(`SELECT * FROM trips WHERE id = '${tripId}'`);
-    const hasAvailableSeats = this.trip.availablePlaces >= passengersCount;
-    if (!hasAvailableSeats) {
+    this.trip = this.selectTrip(tripId);
+    const hasNoAvailableSeats = this.trip.availablePlaces < passengersCount;
+    if (hasNoAvailableSeats) {
       throw new Error("There are no seats available in the trip");
     }
   }
 
+  // * 🧼 🚿 CLEAN:  low abstraction methods
+
+  private selectTrip(tripId: string) {
+    return DataBase.selectOne<Trip>(`SELECT * FROM trips WHERE id = '${tripId}'`);
+  }
+
+  private selectTraveler(travelerId: string) {
+    return DataBase.selectOne<Traveler>(`SELECT * FROM travelers WHERE id = '${travelerId}'`);
+  }
+
   private save() {
-    this.booking.id = DB.insert<Booking>(this.booking);
+    return DataBase.insert<Booking>(this.booking);
+  }
+
+  private update() {
+    DataBase.update(this.booking);
   }
 
   private payWithCreditCard(cardNumber: string, cardExpiry: string, cardCVC: string) {
     this.booking.price = this.calculatePrice();
     const paymentId = this.payPriceWithCard(cardNumber, cardExpiry, cardCVC);
-    // 🧼 conditional blocks on functions
+    // * 🧼 🚿 CLEAN:  conditional blocks on functions
     if (paymentId != "") {
       this.setPaymentStatus();
     } else {
       this.processNonPayedBooking(cardNumber);
     }
-    DB.update(this.booking);
+    this.update();
   }
 
   private payPriceWithCard(cardNumber: string, cardExpiry: string, cardCVC: string) {
-    const payments = new Payments();
-    const paymentId = payments.payBooking(
-      this.booking,
-      PaymentMethod.CREDIT_CARD,
-      cardNumber,
-      cardExpiry,
-      cardCVC,
-      "",
-      "",
-      "",
-    );
+    const paymentsService = new PaymentsService();
+    const paymentId = paymentsService.payWithCard(this.booking, cardNumber, cardExpiry, cardCVC);
     return paymentId;
   }
 
   private processNonPayedBooking(cardNumber: string) {
     this.booking.status = BookingStatus.ERROR;
-    const smtp = new SMTP();
+    this.sendPaymentErrorEmail(cardNumber);
+  }
+
+  // * 🧼 🚿 CLEAN:  low abstraction SMTP
+  private sendPaymentErrorEmail(cardNumber: string) {
+    const smtp = new SmtpService();
     smtp.sendMail(
       "payments@astrobookings.com",
       this.traveler.email,
@@ -160,7 +170,7 @@ export class Bookings {
   }
 
   private calculatePrice(): number {
-    // 🧼 large process divided in small ones
+    // * 🧼 🚿 CLEAN:  large process divided in small ones
     const millisecondsPerDay = this.calculateMillisecondsPerDay();
     const stayingNights = this.calculateStayingNights(millisecondsPerDay);
 
@@ -194,7 +204,7 @@ export class Bookings {
     const secondsPerMinute = 60;
     const minutesPerHour = 60;
     const hoursPerDay = 24;
-    // 🧼 one operator per statement
+    // * 🧼 🚿 CLEAN:  one operator per statement
     const millisecondsPerMinute = millisecondsPerSecond * secondsPerMinute;
     const millisecondsPerHour = millisecondsPerMinute * minutesPerHour;
     const millisecondsPerDay = millisecondsPerHour * hoursPerDay;
