@@ -1,31 +1,32 @@
-import { Booking, BookingStatus } from "./booking";
-import { BookingsRequestDTO } from "./bookingsRequestDTO";
-import { BookingsRequestVO } from "./bookingsRequestVO";
-import { CreditCardVO } from "./creditCardVO";
-import { DateRangeVO } from "./dateRangeVO";
-import { DB } from "./db";
-import { Notifications } from "./notifications";
-import { PaymentMethod, Payments } from "./payments";
-import { SMTP } from "./smtp";
-import { Traveler } from "./traveler";
-import { Trip } from "./trip";
+import { BookingDto } from "./booking.dto";
+import { BookingsRequestDto } from "./bookings_request.dto";
+import { BookingsRequestVo } from "./bookings_request.vo";
+import { BookingStatus } from "./booking_status.enum";
+import { CreditCardVo } from "./credit_card.vo";
+import { DataBase } from "./data_base";
+import { DateRangeVo } from "./date_range.vo";
+import { NotificationsService } from "./notifications.service";
+import { PaymentsService } from "./payments.service";
+import { SmtpService } from "./smtp.service";
+import { TravelerDto } from "./traveler.dto";
+import { TripDto } from "./trip.dto";
 
-export class Bookings {
-  private booking!: Booking;
-  private trip!: Trip;
-  private traveler!: Traveler;
-  private bookingsRequest!: BookingsRequestVO;
+export class BookingsService {
+  private booking!: BookingDto;
+  private trip!: TripDto;
+  private traveler!: TravelerDto;
+  private bookingsRequest!: BookingsRequestVo;
 
   /**
    * Requests a new booking
    * @param bookingsRequestDTO - the booking request
-   * @returns {Booking} the new booking object
+   * @returns {BookingDto} the new booking object
    * @throws {Error} if the booking is not possible
    */
-  public request(bookingsRequestDTO: BookingsRequestDTO): Booking {
-    // 🧼 Data transfer object to avoid multiple parameters on methods signatures
-    // 🧼 Saved as a property on the class to reduce method parameters
-    this.bookingsRequest = new BookingsRequestVO(bookingsRequestDTO);
+  public request(bookingsRequestDTO: BookingsRequestDto): BookingDto {
+    // * 🧼 🚿 CLEAN:  Data transfer object to avoid multiple parameters on methods signatures
+    // * 🧼 🚿 CLEAN:  Saved as a property on the class to reduce method parameters
+    this.bookingsRequest = new BookingsRequestVo(bookingsRequestDTO);
     this.create();
     this.save();
     this.pay();
@@ -36,7 +37,7 @@ export class Bookings {
     if (this.booking.id === undefined) {
       return;
     }
-    const notifications = new Notifications();
+    const notifications = new NotificationsService();
     return notifications.notifyBookingConfirmation({
       recipient: this.traveler.email,
       tripDestination: this.trip.destination,
@@ -49,7 +50,7 @@ export class Bookings {
       this.payWithCreditCard(this.bookingsRequest.card);
     } catch (error) {
       this.booking.status = BookingStatus.ERROR;
-      DB.update(this.booking);
+      DataBase.update(this.booking);
       throw error;
     }
   }
@@ -57,7 +58,7 @@ export class Bookings {
   private create(): void {
     this.bookingsRequest.passengersCount = this.getValidatedPassengersCount();
     this.checkAvailability();
-    this.booking = new Booking(
+    this.booking = new BookingDto(
       this.bookingsRequest.tripId,
       this.bookingsRequest.travelerId,
       this.bookingsRequest.passengersCount,
@@ -92,12 +93,12 @@ export class Bookings {
   }
 
   private isNonVip(travelerId: string): boolean {
-    this.traveler = DB.selectOne<Traveler>(`SELECT * FROM travelers WHERE id = '${travelerId}'`);
+    this.traveler = DataBase.selectOne<TravelerDto>(`SELECT * FROM travelers WHERE id = '${travelerId}'`);
     return this.traveler.isVip;
   }
 
   private checkAvailability() {
-    this.trip = DB.selectOne<Trip>(`SELECT * FROM trips WHERE id = '${this.bookingsRequest.tripId}'`);
+    this.trip = DataBase.selectOne<TripDto>(`SELECT * FROM trips WHERE id = '${this.bookingsRequest.tripId}'`);
     const hasAvailableSeats = this.trip.availablePlaces >= this.bookingsRequest.passengersCount;
     if (!hasAvailableSeats) {
       throw new Error("There are no seats available in the trip");
@@ -105,10 +106,10 @@ export class Bookings {
   }
 
   private save() {
-    this.booking.id = DB.insert<Booking>(this.booking);
+    this.booking.id = DataBase.insert<BookingDto>(this.booking);
   }
 
-  private payWithCreditCard(creditCard: CreditCardVO) {
+  private payWithCreditCard(creditCard: CreditCardVo) {
     this.booking.price = this.calculatePrice();
     const paymentId = this.payPriceWithCard(creditCard);
     if (paymentId != "") {
@@ -116,23 +117,18 @@ export class Bookings {
     } else {
       this.processNonPayedBooking(creditCard.number);
     }
-    DB.update(this.booking);
+    DataBase.update(this.booking);
   }
 
-  private payPriceWithCard(creditCard: CreditCardVO) {
-    const payments = new Payments(this.booking);
-    const paymentId = payments.payBooking({
-      method: PaymentMethod.CREDIT_CARD,
-      creditCard,
-      payMe: undefined,
-      transferAccount: "",
-    });
+  private payPriceWithCard(creditCard: CreditCardVo) {
+    const payments = new PaymentsService(this.booking);
+    const paymentId = payments.payWithCard(creditCard);
     return paymentId;
   }
 
   private processNonPayedBooking(cardNumber: string) {
     this.booking.status = BookingStatus.ERROR;
-    const smtp = new SMTP();
+    const smtp = new SmtpService();
     smtp.sendMail({
       from: "payments@astrobookings.com",
       to: this.traveler.email,
@@ -147,7 +143,7 @@ export class Bookings {
   }
 
   private calculatePrice(): number {
-    const stayingNights = new DateRangeVO(this.trip.startDate, this.trip.endDate).toWholeDays;
+    const stayingNights = new DateRangeVo(this.trip.startDate, this.trip.endDate).toWholeDays;
     const passengerPrice = this.calculatePassengerPrice(stayingNights);
     const passengersPrice = passengerPrice * this.booking.passengersCount;
     const extraTripPrice = this.calculateExtraPricePerTrip();

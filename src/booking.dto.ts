@@ -1,12 +1,6 @@
-export enum BookingStatus {
-  REQUESTED,
-  PAID,
-  RESERVED,
-  NOTIFIED_RESERVATION,
-  ERROR,
-  CANCELLED,
-}
-export class Booking {
+import { BookingStatus } from "./booking_status.enum";
+
+export class BookingDto {
   public id: string | undefined;
   public tripId: string;
   public travelerId: string;
