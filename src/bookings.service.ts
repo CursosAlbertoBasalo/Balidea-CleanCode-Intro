@@ -1,11 +1,11 @@
 import { Booking, BookingStatus } from "./booking";
-import { DataBase } from "./dataBase";
+import { DataBase } from "./data_base";
 import { Traveler } from "./traveler";
 import { Trip } from "./trip";
-// 🧼 PascalCase
-export class Bookings {
+// * 🧼 🚿  CLEAN:  PascalCase, expressive and easy distinguible (also on file)
+export class BookingsService {
   private booking!: Booking;
-  private trip!: Trip; // 🧼 consistent naming
+  private trip!: Trip; // * 🧼 🚿 CLEAN: consistent naming
 
   /**
    * Requests a new booking
@@ -14,7 +14,7 @@ export class Bookings {
    * @param {number} passengersCount - the number of passengers to reserve
    * @param {string} cardNumber - the card number to pay with
    * @param {string} cardExpiry - the card expiry date
-   * @param {string} cardCVC - the card CVC
+   * @param {string} cardCvc - the card CVC
    * @param {boolean} hasPremiumFoods - if the traveler has premium foods
    * @param {number} extraLuggageKilos - the number of extra luggage kilos
    * @returns {Booking} the new booking object
@@ -22,21 +22,21 @@ export class Bookings {
    */
   public request(
     travelerId: string,
-    tripId: string, // 🧼 camelCase
-    passengersCount: number, // 🧼 distinction between a list and a value
+    tripId: string, // * 🧼 🚿 CLEAN: camelCase
+    passengersCount: number, // * 🧼 🚿 CLEAN: distinction between a list and a value
     cardNumber: string,
-    cardExpiry: string, // 🧼 coherent name
-    cardCVC: string,
-    hasPremiumFoods: boolean, // 🧼 boolean flags
+    cardExpiry: string, // * 🧼 🚿 CLEAN: coherent name
+    cardCvc: string, // * 🧼 🚿 CLEAN: uppercase consistency
+    hasPremiumFoods: boolean, // * 🧼 🚿 CLEAN: boolean flags
     extraLuggageKilos: number,
   ): Booking {
     this.create(travelerId, tripId, passengersCount, hasPremiumFoods, extraLuggageKilos);
-    // 🧼 remove empty line
+    // * 🧼 🚿 CLEAN: remove empty line
     this.save();
-    this.pay(cardNumber, cardExpiry, cardCVC);
+    this.pay(cardNumber, cardExpiry, cardCvc);
     return this.booking;
   }
-  // 🧼 clear intention, non redundant name, no comment
+  // * 🧼 🚿 CLEAN: clear intention, non redundant name, no comment
   private create(
     travelerId: string,
     tripId: string,
@@ -50,14 +50,14 @@ export class Bookings {
     this.booking.hasPremiumFoods = hasPremiumFoods;
     this.booking.extraLuggageKilos = extraLuggageKilos;
   }
-  // 🧼 start with get and express the intention and use consistent naming for parameters
+  // * 🧼 🚿 CLEAN: start with get and express the intention and use consistent naming for parameters
   private getValidatedPassengersCount(travelerId: string, passengersCount: number) {
-    const maxPassengersCount = 6; // 🧼 remove magic number
+    const maxPassengersCount = 6; // * 🧼 🚿 CLEAN: remove magic number
     if (passengersCount > maxPassengersCount) {
       throw new Error(`Nobody can't have more than ${maxPassengersCount} passengers`);
     }
-    // 🧼 remove comments by using clear names
-    const maxNonVipPassengersCount = 4; // 🧼 remove magic number
+    // * 🧼 🚿 CLEAN: remove comments by using clear names
+    const maxNonVipPassengersCount = 4; // * 🧼 🚿 CLEAN: remove magic number
     if (this.isNonVip(travelerId) && passengersCount > maxNonVipPassengersCount) {
       throw new Error(`No VIPs cant't have more than ${maxNonVipPassengersCount} passengers`);
     }
@@ -66,7 +66,7 @@ export class Bookings {
     }
     return passengersCount;
   }
-  // 🧼 boolean verbs should start with flags
+  // * 🧼 🚿 CLEAN: boolean verbs should start with flags
   private isNonVip(travelerId: string): boolean {
     const theTraveler = DataBase.selectOne<Traveler>(`SELECT * FROM travelers WHERE id = '${travelerId}'`);
     return theTraveler.isVip;
@@ -74,13 +74,13 @@ export class Bookings {
 
   private checkAvailability(tripId: string, passengersCount: number) {
     this.trip = DataBase.selectOne<Trip>(`SELECT * FROM trips WHERE id = '${tripId}'`);
-    // 🧼 flags should start with flag verbs
+    // * 🧼 🚿 CLEAN: flags should start with flag verbs
     const hasAvailableSeats = this.trip.availablePlaces >= passengersCount;
     if (!hasAvailableSeats) {
       throw new Error("There are no seats available in the trip");
     }
   }
-  // 🧼 remove redundant comments and words
+  // * 🧼 🚿 CLEAN: remove redundant comments and words
   private save() {
     this.booking.id = DataBase.insert<Booking>(this.booking);
   }
@@ -92,14 +92,14 @@ export class Bookings {
     this.booking.status = BookingStatus.PAID;
     DataBase.update(this.booking);
   }
-  // 🧼 use verbs to clarify intention
+  // * 🧼 🚿 CLEAN: use verbs to clarify intention
   private calculatePrice(): number {
-    // 🧼 remove magic number
+    // * 🧼 🚿 CLEAN: remove magic number
     const millisecondsPerSecond = 1000;
     const secondsPerMinute = 60;
     const minutesPerHour = 60;
     const hoursPerDay = 24;
-    // 🧼 use a consistent name pattern
+    // * 🧼 🚿 CLEAN: use a consistent name pattern
     const millisecondsPerDay = millisecondsPerSecond * secondsPerMinute * minutesPerHour * hoursPerDay;
     const stayingNights = Math.round(this.trip.endDate.getTime() - this.trip.startDate.getTime() / millisecondsPerDay);
     // Calculate staying price

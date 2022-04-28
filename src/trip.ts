@@ -1,16 +1,19 @@
-// 🧼 PascalCase
+// ToDo: extract to file
+
+// * 🧼 🚿 CLEAN: PascalCase
 export enum TripKinds {
   TRIP_ONLY,
   WITH_STAY,
 }
 
+// ToDo: extract to file
 export enum TripStatus {
   WAITING,
   CANCELLED,
   CONFIRMED,
 }
 
-// 🧼 consisten and explicit naming
+// * 🧼 🚿 CLEAN: consistent and explicit naming
 export class Trip {
   public id: string | undefined;
   public operatorId: string;
